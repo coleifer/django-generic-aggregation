@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -11,7 +13,7 @@ class Food(models.Model):
 
 class Rating(models.Model):
     rating = models.IntegerField()
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(default=datetime.datetime.now)
     object_id = models.IntegerField()
     content_type = models.ForeignKey(ContentType)
     content_object = GenericForeignKey(ct_field='content_type', fk_field='object_id')

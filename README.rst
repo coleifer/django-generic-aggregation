@@ -42,7 +42,7 @@ You want to figure out which items are highest rated::
 
     >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, 'rating', Avg)
     >>> print aggregate
-    4
+    5
 
 
 Check the tests - there are more examples there.  Tested with postgres & sqlite

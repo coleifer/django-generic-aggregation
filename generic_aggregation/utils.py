@@ -1,5 +1,18 @@
+import django
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection, models
+
+def query_as_sql(query):
+    if django.VERSION < (1, 2):
+        return query.as_sql()
+    else:
+        return query.get_compiler(connection=connection).as_sql()
+
+def query_as_nested_sql(query):
+    if django.VERSION < (1, 2):
+        return query.as_nested_sql()
+    else:
+        return query.get_compiler(connection=connection).as_nested_sql()
 
 def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum,
         generic_queryset=None, desc=True):
@@ -29,7 +42,8 @@ def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum
     """ % params
     
     if generic_queryset is not None:
-        inner_query, inner_query_params = generic_queryset.values_list('pk').query.as_sql()
+        generic_query = generic_queryset.values_list('pk').query
+        inner_query, inner_query_params = query_as_sql(generic_query)
         
         inner_params = (
             qn(generic_queryset.model._meta.db_table),
@@ -55,7 +69,7 @@ def generic_aggregate(queryset, gfk_field, aggregate_field, aggregator=models.Su
     content_type = ContentType.objects.get_for_model(queryset.model)
     
     queryset = queryset.values_list('pk') # just the pks
-    query, query_params = queryset.query.as_nested_sql()
+    query, query_params = query_as_nested_sql(queryset.query)
     
     qn = connection.ops.quote_name
     
@@ -80,7 +94,8 @@ def generic_aggregate(queryset, gfk_field, aggregate_field, aggregator=models.Su
     query_end = ")"
     
     if generic_queryset is not None:
-        inner_query, inner_query_params = generic_queryset.values_list('pk').query.as_sql()
+        generic_query = generic_queryset.values_list('pk').query
+        inner_query, inner_query_params = query_as_sql(generic_query)
         
         query_params += inner_query_params
         

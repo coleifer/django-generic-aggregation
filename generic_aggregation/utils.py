@@ -14,6 +14,25 @@ def query_as_nested_sql(query):
     else:
         return query.get_compiler(connection=connection).as_nested_sql()
 
+def gfk_expression(qs_model, gfk_field):
+    # handle casting the GFK field if need be
+    qn = connection.ops.quote_name
+    
+    pk_field_type = qs_model._meta.pk.db_type()
+    gfk_field_type = gfk_field.model._meta.get_field(gfk_field.fk_field).db_type()
+    
+    if pk_field_type == 'serial':
+        pk_field_type = 'integer'
+    
+    if pk_field_type != gfk_field_type:
+        # cast the gfk to the pk type
+        gfk_expr = "CAST(%s AS %s)" % (qn(gfk_field.fk_field), pk_field_type)
+    else:
+        gfk_expr = qn(gfk_field.fk_field) # the object_id field on the GFK
+    
+    return gfk_expr
+
+
 def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum,
         generic_queryset=None, desc=True):
     ordering = desc and '-score' or 'score'
@@ -28,18 +47,19 @@ def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum
         qn(gfk_field.model._meta.db_table), # table holding gfk'd item info
         qn(gfk_field.ct_field + '_id'), # the content_type field on the GFK
         content_type.pk, # the content_type id we need to match
-        qn(gfk_field.fk_field), # the object_id field on the GFK
+        gfk_expression(queryset.model, gfk_field),
         qn(queryset.model._meta.db_table), # the table and pk from the main
         qn(queryset.model._meta.pk.name)   # part of the query
     )
     
-    extra = """
+    sql_template = """
         SELECT %s(%s) AS aggregate_score
         FROM %s
         WHERE
             %s=%s AND
-            %s=%s.%s
-    """ % params
+            %s=%s.%s"""
+    
+    extra = sql_template % params
     
     if generic_queryset is not None:
         generic_query = generic_queryset.values_list('pk').query
@@ -80,7 +100,7 @@ def generic_aggregate(queryset, gfk_field, aggregate_field, aggregator=models.Su
         qn(gfk_field.model._meta.db_table), # table holding gfk'd item info
         qn(gfk_field.ct_field + '_id'), # the content_type field on the GFK
         content_type.pk, # the content_type id we need to match
-        qn(gfk_field.fk_field), # the object_id field on the GFK
+        gfk_expression(queryset.model, gfk_field), # the object_id field on the GFK
     )
     
     query_start = """

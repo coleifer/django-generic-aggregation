@@ -5,7 +5,7 @@ from django.db import models
 from django.test import TestCase
 
 from generic_aggregation import generic_annotate, generic_aggregate
-from generic_aggregation.tests.models import Food, Rating
+from generic_aggregation.tests.models import Food, Rating, CharFieldGFK
 
 class SimpleTest(TestCase):
     def setUp(self):
@@ -102,3 +102,22 @@ class SimpleTest(TestCase):
         
         aggregated = generic_aggregate(Food.objects.all(), Rating.content_object, 'rating', models.Count, todays_ratings)
         self.assertEqual(aggregated, 4)
+    
+    def test_charfield_pks(self):
+        a1 = CharFieldGFK.objects.create(name='a1', content_object=self.apple)
+        a2 = CharFieldGFK.objects.create(name='a2', content_object=self.apple)
+        o1 = CharFieldGFK.objects.create(name='o1', content_object=self.orange)
+        
+        annotated_qs = generic_annotate(Food.objects.all(), CharFieldGFK.content_object, 'name', models.Count)
+        self.assertEqual(annotated_qs.count(), 2)
+        
+        food_a, food_b = annotated_qs
+        
+        self.assertEqual(food_b.score, 1)
+        self.assertEqual(food_b.name, 'orange')
+        
+        self.assertEqual(food_a.score, 2)
+        self.assertEqual(food_a.name, 'apple')
+    
+        aggregated = generic_aggregate(Food.objects.all(), CharFieldGFK.content_object, 'name', models.Count)
+        self.assertEqual(aggregated, 3)

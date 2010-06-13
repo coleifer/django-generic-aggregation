@@ -20,3 +20,10 @@ class Rating(models.Model):
     
     def __unicode__(self):
         return '%s rated %s' % (self.content_object, self.rating)
+
+
+class CharFieldGFK(models.Model):
+    name = models.CharField(max_length=255)
+    object_id = models.CharField(max_length=10)
+    content_type = models.ForeignKey(ContentType)
+    content_object = GenericForeignKey(ct_field='content_type', fk_field='object_id')

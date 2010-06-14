@@ -121,3 +121,17 @@ class SimpleTest(TestCase):
     
         aggregated = generic_aggregate(Food.objects.all(), CharFieldGFK.content_object, 'name', models.Count)
         self.assertEqual(aggregated, 3)
+
+    def test_custom_alias(self):
+        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, 'rating', models.Count, alias='count')
+        food_a, food_b = annotated_qs
+        
+        self.assertEqual(food_a.count, 4)
+        self.assertEqual(food_a.name, 'apple')
+
+    def test_ascending_order(self):
+        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, 'rating', models.Count, desc=False, alias='count')
+        food_a, food_b = annotated_qs
+        
+        self.assertEqual(food_b.count, 4)
+        self.assertEqual(food_b.name, 'apple')

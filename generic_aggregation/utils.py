@@ -34,8 +34,8 @@ def gfk_expression(qs_model, gfk_field):
 
 
 def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum,
-        generic_queryset=None, desc=True):
-    ordering = desc and '-score' or 'score'
+        generic_queryset=None, desc=True, alias='score'):
+    ordering = desc and '-%s' % alias or alias
     content_type = ContentType.objects.get_for_model(queryset.model)
     
     qn = connection.ops.quote_name
@@ -76,7 +76,7 @@ def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum
         inner_query_params = []
 
     queryset = queryset.extra(
-        select={'score': extra},
+        select={alias: extra},
         select_params=inner_query_params,
         order_by=[ordering]
     )

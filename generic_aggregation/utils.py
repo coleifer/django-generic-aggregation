@@ -33,12 +33,13 @@ def gfk_expression(qs_model, gfk_field):
     return gfk_expr
 
 
-def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum,
-        generic_queryset=None, desc=True, alias='score'):
+def generic_annotate(queryset, gfk_field, aggregator, generic_queryset=None,
+                     desc=True, alias='score'):
     ordering = desc and '-%s' % alias or alias
     content_type = ContentType.objects.get_for_model(queryset.model)
     
     qn = connection.ops.quote_name
+    aggregate_field = aggregator.lookup
     
     # collect the params we'll be using
     params = (
@@ -84,14 +85,14 @@ def generic_annotate(queryset, gfk_field, aggregate_field, aggregator=models.Sum
     return queryset
 
 
-def generic_aggregate(queryset, gfk_field, aggregate_field, aggregator=models.Sum,
-        generic_queryset=None):
+def generic_aggregate(queryset, gfk_field, aggregator, generic_queryset=None):
     content_type = ContentType.objects.get_for_model(queryset.model)
     
     queryset = queryset.values_list('pk') # just the pks
     query, query_params = query_as_nested_sql(queryset.query)
     
     qn = connection.ops.quote_name
+    aggregate_field = aggregator.lookup
     
     # collect the params we'll be using
     params = (

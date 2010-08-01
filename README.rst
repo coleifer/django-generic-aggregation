@@ -14,7 +14,7 @@ You want the most commented on blog entries::
     >>> from blog.models import BlogEntry
     >>> from generic_aggregation import generic_annotate
 
-    >>> annotated = generic_annotate(BlogEntry.objects.all(), Comment.content_object, 'id', Count)
+    >>> annotated = generic_annotate(BlogEntry.objects.all(), Comment.content_object, Count('id'))
 
     >>> for entry in annotated:
     ...    print entry.title, entry.score
@@ -36,11 +36,11 @@ You want to figure out which items are highest rated::
     Rating.objects.create(content_object=apple, rating=5)
     Rating.objects.create(content_object=apple, rating=7)
 
-    >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, 'rating', Sum)
+    >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, Sum('rating'))
     >>> print aggregate
     15
 
-    >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, 'rating', Avg)
+    >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, Avg('rating'))
     >>> print aggregate
     5
 

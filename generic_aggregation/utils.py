@@ -23,6 +23,8 @@ def gfk_expression(qs_model, gfk_field):
     
     if pk_field_type == 'serial':
         pk_field_type = 'integer'
+    elif pk_field_type.lower() == 'integer auto_increment':
+        pk_field_type = 'UNSIGNED'
     
     if pk_field_type != gfk_field_type:
         # cast the gfk to the pk type

@@ -5,7 +5,9 @@ from django.db import models
 from django.test import TestCase
 
 from generic_aggregation import generic_annotate, generic_aggregate
-from generic_aggregation.tests.models import Food, Rating, CharFieldGFK
+from generic_aggregation.generic_aggregation_tests.models import (
+    Food, Rating, CharFieldGFK
+)
 
 class SimpleTest(TestCase):
     def setUp(self):

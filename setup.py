@@ -5,7 +5,7 @@ f = open(os.path.join(os.path.dirname(__file__), 'README.rst'))
 readme = f.read()
 f.close()
 
-VERSION = (0, 1, 1)
+VERSION = (0, 1, 2)
 
 setup(
     name='django-generic-aggregation',
@@ -29,4 +29,5 @@ setup(
         'Programming Language :: Python',
         'Framework :: Django',
     ],
+    test_suite='runtests.runtests',
 )

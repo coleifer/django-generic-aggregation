@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.test import TestCase
 
-from generic_aggregation import generic_annotate, generic_aggregate
+from generic_aggregation import generic_annotate, generic_aggregate, generic_filter
 from generic_aggregation.generic_aggregation_tests.models import (
     Food, Rating, CharFieldGFK
 )
@@ -137,3 +137,7 @@ class SimpleTest(TestCase):
         
         self.assertEqual(food_b.count, 4)
         self.assertEqual(food_b.name, 'apple')
+    
+    def test_filter(self):
+        ratings = generic_filter(Rating.objects.all(), Food.objects.filter(name='orange'))
+        self.assertEqual(len(ratings), 3)

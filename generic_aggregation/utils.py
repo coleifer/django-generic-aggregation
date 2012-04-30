@@ -1,4 +1,5 @@
 import django
+from django.contrib.contenttypes.generic import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection, models
 
@@ -34,9 +35,17 @@ def gfk_expression(qs_model, gfk_field):
     
     return gfk_expr
 
+def get_gfk_field(model):
+    for field in model._meta.virtual_fields:
+        if isinstance(field, GenericForeignKey):
+            return field
+
+    raise ValueError('Unable to find gfk field on %s' % model)
 
 def generic_annotate(queryset, gfk_field, aggregator, generic_queryset=None,
                      desc=True, alias='score'):
+    if gfk_field is None and generic_queryset:
+        gfk_field = get_gfk_field(generic_queryset.model)
     ordering = desc and '-%s' % alias or alias
     content_type = ContentType.objects.get_for_model(queryset.model)
     
@@ -88,6 +97,8 @@ def generic_annotate(queryset, gfk_field, aggregator, generic_queryset=None,
 
 
 def generic_aggregate(queryset, gfk_field, aggregator, generic_queryset=None):
+    if gfk_field is None and generic_queryset:
+        gfk_field = get_gfk_field(generic_queryset.model)
     content_type = ContentType.objects.get_for_model(queryset.model)
     
     queryset = queryset.values_list('pk') # just the pks
@@ -138,3 +149,30 @@ def generic_aggregate(queryset, gfk_field, aggregator, generic_queryset=None):
     row = cursor.fetchone()
 
     return row[0]
+
+def generic_filter(queryset, filter_queryset, gfk_field=None):
+    if not gfk_field:
+        gfk_field = get_gfk_field(queryset.model)
+    
+    # get the contenttype of our filtered queryset, e.g. Business
+    filter_model = filter_queryset.model
+    content_type = ContentType.objects.get_for_model(filter_model)
+    
+    # filter the generic queryset to only include items of the given ctype
+    queryset = queryset.filter(**{gfk_field.ct_field: content_type})
+    
+    qn = connection.ops.quote_name
+
+    # just select the primary keys in the sub-select
+    filtered_query = filter_queryset.values_list('pk').query
+    inner_query, inner_query_params = query_as_sql(filtered_query)
+    
+    where = '%s IN (%s)' % (
+        gfk_expression(filter_model, gfk_field),
+        inner_query,
+    )
+    
+    return queryset.extra(
+        where=(where,),
+        params=inner_query_params
+    )

@@ -1,1 +1,1 @@
-from generic_aggregation.utils import generic_aggregate, generic_annotate
+from generic_aggregation.utils import generic_aggregate, generic_annotate, generic_filter

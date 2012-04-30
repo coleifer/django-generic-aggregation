@@ -2,7 +2,8 @@
 django-generic-aggregation
 ==========================
 
-annotate() and aggregate() for generically-related data.
+annotate() and aggregate() for generically-related data.  also a handy function
+for filtering GFK-model querysets.
 
 Examples
 --------
@@ -44,5 +45,12 @@ You want to figure out which items are highest rated::
     >>> print aggregate
     5
 
+You want to only display ratings for comments made on a given site:
+
+    >>> from django.contrib.comments.models import Comment
+    >>> from generic_aggregation import generic_filter
+    >>> ratings = Rating.objects.all() # <--- grab all the ratings
+    >>> comments = Comment.objects.filter(site=Site.objects.get_current())
+    >>> siteified_ratings = generic_filter(ratings, comments)
 
 Check the tests - there are more examples there.  Tested with postgres & sqlite

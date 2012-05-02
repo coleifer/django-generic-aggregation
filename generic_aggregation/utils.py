@@ -199,7 +199,7 @@ def fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=
     )
     
     sql_template = """
-        SELECT %s(%s) AS aggregate_score
+        SELECT COALESCE(%s(%s), 0) AS aggregate_score
         FROM %s
         WHERE
             %s=%s AND

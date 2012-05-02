@@ -18,7 +18,7 @@ class Rating(models.Model):
 
 class CharFieldGFK(models.Model):
     name = models.CharField(max_length=255)
-    object_id = models.CharField(max_length=10)
+    object_id = models.TextField()
     content_type = models.ForeignKey(ContentType)
     content_object = GenericForeignKey(ct_field='content_type', fk_field='object_id')
 

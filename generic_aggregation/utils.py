@@ -134,6 +134,11 @@ def generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):
     if not gfk_field:
         gfk_field = get_gfk_field(generic_qs.model)
     
+    pk_field_type = get_field_type(filter_qs.model._meta.pk)
+    gfk_field_type = get_field_type(generic_qs.model._meta.get_field(gfk_field.fk_field))
+    if pk_field_type != gfk_field_type:
+        return fallback_generic_filter(generic_qs, filter_qs, gfk_field)
+    
     return generic_qs.filter(**{
         gfk_field.ct_field: ContentType.objects.get_for_model(filter_qs.model),
         '%s__in' % gfk_field.fk_field: filter_qs.values('pk'),
@@ -287,3 +292,31 @@ def fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field
     row = cursor.fetchone()
 
     return row[0]
+
+def fallback_generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):
+    generic_qs = normalize_qs_model(generic_qs_model)
+    filter_qs = normalize_qs_model(filter_qs_model)
+    
+    if gfk_field is None:
+        gfk_field = get_gfk_field(generic_qs.model)
+    
+    # get the contenttype of our filtered queryset, e.g. Business
+    filter_model = filter_qs.model
+    content_type = ContentType.objects.get_for_model(filter_model)
+    
+    # filter the generic queryset to only include items of the given ctype
+    generic_qs = generic_qs.filter(**{gfk_field.ct_field: content_type})
+    
+    # just select the primary keys in the sub-select
+    filtered_query = filter_qs.values_list('pk').query
+    inner_query, inner_query_params = query_as_sql(filtered_query)
+    
+    where = '%s IN (%s)' % (
+        gfk_expression(filter_model, gfk_field),
+        inner_query,
+    )
+    
+    return generic_qs.extra(
+        where=(where,),
+        params=inner_query_params
+    )

@@ -4,8 +4,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.test import TestCase
 
-from generic_aggregation import generic_annotate as _generic_annotate, generic_aggregate as _generic_aggregate, generic_filter
-from generic_aggregation.utils import fallback_generic_annotate, fallback_generic_aggregate
+from generic_aggregation import generic_annotate as _generic_annotate, generic_aggregate as _generic_aggregate, generic_filter as _generic_filter
+from generic_aggregation.utils import fallback_generic_annotate, fallback_generic_aggregate, fallback_generic_filter
 from generic_aggregation.generic_aggregation_tests.models import (
     Food, Rating, CharFieldGFK
 )
@@ -31,6 +31,9 @@ class SimpleTest(TestCase):
     
     def generic_aggregate(self, *args, **kwargs):
         return _generic_aggregate(*args, **kwargs)
+    
+    def generic_filter(self, *args, **kwargs):
+        return _generic_filter(*args, **kwargs)
         
     def test_annotation(self):
         annotated_qs = self.generic_annotate(Food.objects.all(), Rating.objects.all(), models.Count('ratings__rating'))
@@ -139,7 +142,7 @@ class SimpleTest(TestCase):
         self.assertEqual(food_a.name, 'apple')
     
     def test_filter(self):
-        ratings = generic_filter(Rating.objects.all(), Food.objects.filter(name='orange'))
+        ratings = self.generic_filter(Rating.objects.all(), Food.objects.filter(name='orange'))
         self.assertEqual(len(ratings), 3)
 
 class FallbackTestCase(SimpleTest):
@@ -148,3 +151,6 @@ class FallbackTestCase(SimpleTest):
     
     def generic_aggregate(self, *args, **kwargs):
         return fallback_generic_aggregate(*args, **kwargs)
+    
+    def generic_filter(self, *args, **kwargs):
+        return fallback_generic_filter(*args, **kwargs)

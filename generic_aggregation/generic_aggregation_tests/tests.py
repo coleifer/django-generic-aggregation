@@ -26,7 +26,7 @@ class SimpleTest(TestCase):
         Rating.objects.create(content_object=self.orange, rating=8, created=dt)
         
     def test_annotation(self):
-        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, models.Count('rating'))
+        annotated_qs = generic_annotate(Food.objects.all(), Rating.objects.all(), models.Count('ratings__rating'))
         self.assertEqual(annotated_qs.count(), 2)
         
         food_a, food_b = annotated_qs
@@ -37,10 +37,10 @@ class SimpleTest(TestCase):
         self.assertEqual(food_b.score, 3)
         self.assertEqual(food_b.name, 'orange')
         
-        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, models.Sum('rating'))
+        annotated_qs = generic_annotate(Food.objects.all(), Rating, models.Sum('ratings__rating'))
         self.assertEqual(annotated_qs.count(), 2)
         
-        food_b, food_a = annotated_qs
+        food_b, food_a = annotated_qs.order_by('-score')
         
         self.assertEqual(food_b.score, 15)
         self.assertEqual(food_b.name, 'orange')
@@ -48,10 +48,10 @@ class SimpleTest(TestCase):
         self.assertEqual(food_a.score, 12)
         self.assertEqual(food_a.name, 'apple')
         
-        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, models.Avg('rating'))
+        annotated_qs = generic_annotate(Food, Rating, models.Avg('ratings__rating'))
         self.assertEqual(annotated_qs.count(), 2)
         
-        food_b, food_a = annotated_qs
+        food_b, food_a = annotated_qs.order_by('-score')
         
         self.assertEqual(food_b.score, 5)
         self.assertEqual(food_b.name, 'orange')
@@ -61,35 +61,35 @@ class SimpleTest(TestCase):
     
     def test_aggregation(self):
         # number of ratings on any food
-        aggregated = generic_aggregate(Food.objects.all(), Rating.content_object, models.Count('rating'))
+        aggregated = generic_aggregate(Food, Rating, models.Count('ratings__rating'))
         self.assertEqual(aggregated, 7)
         
         # total of ratings out there for all foods
-        aggregated = generic_aggregate(Food.objects.all(), Rating.content_object, models.Sum('rating'))
+        aggregated = generic_aggregate(Food.objects.all(), Rating, models.Sum('ratings__rating'))
         self.assertEqual(aggregated, 27)
         
         # (showing the use of filters and inner query)
         
-        aggregated = generic_aggregate(Food.objects.filter(name='apple'), Rating.content_object, models.Count('rating'))
+        aggregated = generic_aggregate(Food.objects.filter(name='apple'), Rating, models.Count('ratings__rating'))
         self.assertEqual(aggregated, 4)
         
-        aggregated = generic_aggregate(Food.objects.filter(name='orange'), Rating.content_object, models.Count('rating'))
+        aggregated = generic_aggregate(Food.objects.filter(name='orange'), Rating, models.Count('ratings__rating'))
         self.assertEqual(aggregated, 3)
         
         # avg for apple
-        aggregated = generic_aggregate(Food.objects.filter(name='apple'), Rating.content_object, models.Avg('rating'))
+        aggregated = generic_aggregate(Food.objects.filter(name='apple'), Rating, models.Avg('ratings__rating'))
         self.assertEqual(aggregated, 3)
         
         # avg for orange
-        aggregated = generic_aggregate(Food.objects.filter(name='orange'), Rating.content_object, models.Avg('rating'))
+        aggregated = generic_aggregate(Food.objects.filter(name='orange'), Rating, models.Avg('ratings__rating'))
         self.assertEqual(aggregated, 5)
     
     def test_subset_annotation(self):
         todays_ratings = Rating.objects.filter(created__gte=datetime.date.today())
-        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, models.Sum('rating'), todays_ratings)
+        annotated_qs = generic_annotate(Food.objects.all(), todays_ratings, models.Sum('ratings__rating'))
         self.assertEqual(annotated_qs.count(), 2)
         
-        food_a, food_b = annotated_qs
+        food_a, food_b = annotated_qs.order_by('-score')
 
         self.assertEqual(food_a.score, 8)
         self.assertEqual(food_a.name, 'apple')
@@ -99,10 +99,10 @@ class SimpleTest(TestCase):
     
     def test_subset_aggregation(self):
         todays_ratings = Rating.objects.filter(created__gte=datetime.date.today())
-        aggregated = generic_aggregate(Food.objects.all(), Rating.content_object, models.Sum('rating'), todays_ratings)
+        aggregated = generic_aggregate(Food.objects.all(), todays_ratings, models.Sum('ratings__rating'))
         self.assertEqual(aggregated, 15)
         
-        aggregated = generic_aggregate(Food.objects.all(), Rating.content_object, models.Count('rating'), todays_ratings)
+        aggregated = generic_aggregate(Food.objects.all(), todays_ratings, models.Count('ratings__rating'))
         self.assertEqual(aggregated, 4)
     
     def test_charfield_pks(self):
@@ -110,10 +110,10 @@ class SimpleTest(TestCase):
         a2 = CharFieldGFK.objects.create(name='a2', content_object=self.apple)
         o1 = CharFieldGFK.objects.create(name='o1', content_object=self.orange)
         
-        annotated_qs = generic_annotate(Food.objects.all(), CharFieldGFK.content_object, models.Count('name'))
+        annotated_qs = generic_annotate(Food.objects.all(), CharFieldGFK, models.Count('char_gfk__name'))
         self.assertEqual(annotated_qs.count(), 2)
         
-        food_a, food_b = annotated_qs
+        food_a, food_b = annotated_qs.order_by('-score')
         
         self.assertEqual(food_b.score, 1)
         self.assertEqual(food_b.name, 'orange')
@@ -121,22 +121,15 @@ class SimpleTest(TestCase):
         self.assertEqual(food_a.score, 2)
         self.assertEqual(food_a.name, 'apple')
     
-        aggregated = generic_aggregate(Food.objects.all(), CharFieldGFK.content_object, models.Count('name'))
+        aggregated = generic_aggregate(Food.objects.all(), CharFieldGFK, models.Count('char_gfk__name'))
         self.assertEqual(aggregated, 3)
 
     def test_custom_alias(self):
-        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, models.Count('rating'), alias='count')
-        food_a, food_b = annotated_qs
+        annotated_qs = generic_annotate(Food, Rating, models.Count('ratings__rating'), alias='count')
+        food_a, food_b = annotated_qs.order_by('-count')
         
         self.assertEqual(food_a.count, 4)
         self.assertEqual(food_a.name, 'apple')
-
-    def test_ascending_order(self):
-        annotated_qs = generic_annotate(Food.objects.all(), Rating.content_object, models.Count('rating'), desc=False, alias='count')
-        food_a, food_b = annotated_qs
-        
-        self.assertEqual(food_b.count, 4)
-        self.assertEqual(food_b.name, 'apple')
     
     def test_filter(self):
         ratings = generic_filter(Rating.objects.all(), Food.objects.filter(name='orange'))

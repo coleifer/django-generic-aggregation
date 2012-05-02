@@ -1,14 +1,8 @@
 import datetime
 
-from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.generic import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-
-class Food(models.Model):
-    name = models.CharField(max_length=100)
-
-    def __unicode__(self):
-        return self.name
 
 
 class Rating(models.Model):
@@ -27,3 +21,13 @@ class CharFieldGFK(models.Model):
     object_id = models.CharField(max_length=10)
     content_type = models.ForeignKey(ContentType)
     content_object = GenericForeignKey(ct_field='content_type', fk_field='object_id')
+
+
+class Food(models.Model):
+    name = models.CharField(max_length=100)
+    
+    ratings = GenericRelation(Rating)
+    char_gfk = GenericRelation(CharFieldGFK)
+
+    def __unicode__(self):
+        return self.name

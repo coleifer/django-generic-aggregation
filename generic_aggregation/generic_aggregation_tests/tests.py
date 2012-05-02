@@ -144,6 +144,20 @@ class SimpleTest(TestCase):
     def test_filter(self):
         ratings = self.generic_filter(Rating.objects.all(), Food.objects.filter(name='orange'))
         self.assertEqual(len(ratings), 3)
+        
+        for obj in ratings:
+            self.assertEqual(obj.content_object.name, 'orange')
+    
+    def test_filter_cast(self):
+        a1 = CharFieldGFK.objects.create(name='a1', content_object=self.apple)
+        a2 = CharFieldGFK.objects.create(name='a2', content_object=self.apple)
+        o1 = CharFieldGFK.objects.create(name='o1', content_object=self.orange)
+        
+        qs = self.generic_filter(CharFieldGFK.objects.all(), Food.objects.filter(name='apple'))
+        self.assertEqual(len(qs), 2)
+        
+        for obj in qs:
+            self.assertEqual(obj.content_object.name, 'apple')
 
 class FallbackTestCase(SimpleTest):
     def generic_aggregate(self, *args, **kwargs):

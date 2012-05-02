@@ -5,6 +5,8 @@ django-generic-aggregation
 annotate() and aggregate() for generically-related data.  also a handy function
 for filtering GFK-model querysets.
 
+the use of annotate() and aggregate() require a ``GenericRelation``.
+
 Examples
 --------
 
@@ -15,7 +17,7 @@ You want the most commented on blog entries::
     >>> from blog.models import BlogEntry
     >>> from generic_aggregation import generic_annotate
 
-    >>> annotated = generic_annotate(BlogEntry.objects.all(), Comment.content_object, Count('id'))
+    >>> annotated = generic_annotate(BlogEntry.objects.all(), Comment, Count('comments__id'))
 
     >>> for entry in annotated:
     ...    print entry.title, entry.score
@@ -37,11 +39,11 @@ You want to figure out which items are highest rated::
     Rating.objects.create(content_object=apple, rating=5)
     Rating.objects.create(content_object=apple, rating=7)
 
-    >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, Sum('rating'))
+    >>> aggregate = generic_aggregate(Food, Rating, Sum('ratings__rating'))
     >>> print aggregate
     15
 
-    >>> aggregate = generic_aggregate(Food.objects.all(), Rating.content_object, Avg('rating'))
+    >>> aggregate = generic_aggregate(Food, Rating.objects.all(), Avg('ratings__rating'))
     >>> print aggregate
     5
 

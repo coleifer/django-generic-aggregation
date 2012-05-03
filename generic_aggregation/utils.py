@@ -68,24 +68,35 @@ def prepare_query(qs_model, generic_qs_model, aggregator, gfk_field):
 
 def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, alias='score'):
     """
+    Find blog entries with the most comments:
+    
+        qs = generic_annotate(Entry.objects.public(), Comment.objects.public(), Count('comments__id'))
+        for entry in qs:
+            print entry.title, entry.score
+    
+    Find the highest rated foods:
+    
+        generic_annotate(Food, Rating, Avg('ratings__rating'), alias='avg')
+        for food in qs:
+            print food.name, '- average rating:', food.avg
+    
+    .. note::
+        In both of the above examples it is assumed that a GenericRelation exists
+        on Entry to Comment (named "comments") and also on Food to Rating (named "ratings").
+        If a GenericRelation does *not* exist, the query will still return correct
+        results but the code path will be different as it will use the fallback method.
+    
+    .. warning::
+        If the underlying column type differs between the qs_model's primary
+        key and the generic_qs_model's foreign key column, it will use the fallback
+        method, which can correctly CASTself.
+    
     :param qs_model: A model or a queryset of objects you want to perform
         annotation on, e.g. blog entries
     :param generic_qs_model: A model or queryset containing a GFK, e.g. comments
     :param aggregator: an aggregation, from django.db.models, e.g. Count('id') or Avg('rating')
     :param gfk_field: explicitly specify the field w/the gfk
     :param alias: attribute name to use for annotation
-    
-    Note:
-        requires presence of a GenericRelation() on the qs_model, which should
-        be referenced in the aggregator function
-    
-    Warning:
-        if the primary key field differs in type from the GFK's fk_field a CAST
-        is not expressed on the JOIN, so the code will fallback gracefully
-    
-    Example:
-    
-    generic_annotate(Food.objects.all(), Rating.objects.all(), Avg('ratings__rating'))
     """
     prepared_query = prepare_query(qs_model, generic_qs_model, aggregator, gfk_field)
     if prepared_query is not False:
@@ -97,23 +108,31 @@ def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, ali
 
 def generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field=None):
     """
+    Find total number of comments on blog entries:
+    
+        generic_aggregate(Entry.objects.public(), Comment.objects.public(), Count('comments__id'))
+    
+    Find the average rating for foods starting with 'a':
+    
+        a_foods = Food.objects.filter(name__startswith='a')
+        generic_aggregate(a_foods, Rating, Avg('ratings__rating'))
+    
+    .. note::
+        In both of the above examples it is assumed that a GenericRelation exists
+        on Entry to Comment (named "comments") and also on Food to Rating (named "ratings").
+        If a GenericRelation does *not* exist, the query will still return correct
+        results but the code path will be different as it will use the fallback method.
+    
+    .. warning::
+        If the underlying column type differs between the qs_model's primary
+        key and the generic_qs_model's foreign key column, it will use the fallback
+        method, which can correctly CASTself.
+
     :param qs_model: A model or a queryset of objects you want to perform
         annotation on, e.g. blog entries
     :param generic_qs_model: A model or queryset containing a GFK, e.g. comments
     :param aggregator: an aggregation, from django.db.models, e.g. Count('id') or Avg('rating')
     :param gfk_field: explicitly specify the field w/the gfk
-    
-    Note:
-        requires presence of a GenericRelation() on the qs_model, which should
-        be referenced in the aggregator function
-    
-    Warning:
-        if the primary key field differs in type from the GFK's fk_field a CAST
-        is not expressed on the JOIN, so the code will fallback gracefully
-    
-    Example:
-    
-    generic_annotate(Food.objects.all(), Rating.objects.all(), Avg('ratings__rating'))
     """
     prepared_query = prepare_query(qs_model, generic_qs_model, aggregator, gfk_field)
     if prepared_query is not False:
@@ -125,8 +144,18 @@ def generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field=None):
 
 def generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):
     """
-    Filter a queryset of objects containing GFKs so that they are restricted to
-    only those objects that relate to items in the filter queryset
+    Only show me ratings made on foods that start with "a":
+    
+        a_foods = Food.objects.filter(name__startswith='a')
+        generic_filter(Rating.objects.all(), a_foods)
+    
+    Only show me comments from entries that are marked as public:
+    
+        generic_filter(Comment.objects.public(), Entry.objects.public())
+    
+    :param generic_qs_model: A model or queryset containing a GFK, e.g. comments
+    :param qs_model: A model or a queryset of objects you want to restrict the generic_qs to
+    :param gfk_field: explicitly specify the field w/the gfk
     """
     generic_qs = normalize_qs_model(generic_qs_model)
     filter_qs = normalize_qs_model(filter_qs_model)

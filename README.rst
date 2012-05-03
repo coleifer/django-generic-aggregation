@@ -5,54 +5,67 @@ django-generic-aggregation
 annotate() and aggregate() for generically-related data.  also a handy function
 for filtering GFK-model querysets.
 
-the use of annotate() and aggregate() require a ``GenericRelation``.
+Use django's `GenericRelation <https://docs.djangoproject.com/en/dev/ref/contrib/contenttypes/#reverse-generic-relations>`_ where possible,
+as this can make the queries generated more efficient by using a JOIN rather
+than a subquery.
 
-Examples
+
+installation
+------------
+
+::
+
+    # install from pypi
+    pip install django-generic-aggregation
+    
+    # or install via git
+    pip install -e git+git://github.com/coleifer/django-generic-aggregation.git#egg=generic_aggregation
+
+
+examples
 --------
 
-You want the most commented on blog entries::
+The examples below assume the following simple models:
 
-    >>> from django.contrib.comments.models import Comment
-    >>> from django.db.models import Count
-    >>> from blog.models import BlogEntry
-    >>> from generic_aggregation import generic_annotate
+::
 
-    >>> annotated = generic_annotate(BlogEntry.objects.all(), Comment, Count('comments__id'))
-
-    >>> for entry in annotated:
-    ...    print entry.title, entry.score
-
-    The most popular 5
-    The second best 4
-    Nobody commented 0
-
-
-You want to figure out which items are highest rated::
-
-    from django.db.models import Sum, Avg
-
-    # assume a Food model and a generic Rating model
-    apple = Food.objects.create(name='apple')
+    class Rating(models.Model):
+        rating = models.IntegerField()
+        object_id = models.IntegerField()
+        content_type = models.ForeignKey(ContentType)
+        content_object = GenericForeignKey(ct_field='content_type', fk_field='object_id')
     
-    # create some ratings on the food
-    Rating.objects.create(content_object=apple, rating=3)
-    Rating.objects.create(content_object=apple, rating=5)
-    Rating.objects.create(content_object=apple, rating=7)
+    class Food(models.Model):
+        name = models.CharField(max_length=50)
+        ratings = generic.GenericRelation(Rating) # reverse generic relation
 
-    >>> aggregate = generic_aggregate(Food, Rating, Sum('ratings__rating'))
-    >>> print aggregate
-    15
 
-    >>> aggregate = generic_aggregate(Food, Rating.objects.all(), Avg('ratings__rating'))
-    >>> print aggregate
-    5
+You want to figure out which items are highest rated (generic_annotate)
 
-You want to only display ratings for comments made on a given site:
+::
 
-    >>> from django.contrib.comments.models import Comment
-    >>> from generic_aggregation import generic_filter
-    >>> ratings = Rating.objects.all() # <--- grab all the ratings
-    >>> comments = Comment.objects.filter(site=Site.objects.get_current())
-    >>> siteified_ratings = generic_filter(ratings, comments)
+    from django.db.models import Avg
+    
+    food_qs = Food.objects.filter(name__startswith='a')
+    generic_annotate(food_qs, Rating, Avg('ratings__rating'))
+    
+    # you can mix and match queryset / model
+    generic_annotate(food_qs, Rating.objects.all(), Avg('ratings__rating'))
 
-Check the tests - there are more examples there.  Tested with postgres & sqlite
+You want the average rating for all foods that start with 'a' (generic_aggregate)
+
+::
+
+    food_qs = Food.objects.filter(name__startswith='a')
+    generic_aggregate(food_qs, Rating, Avg('ratings__rating'))
+
+You want to only display ratings for foods that start with 'a' (generic_filter)
+
+    food_qs = Food.objects.filter(name__startswith='a')
+    generic_filter(Rating.objects.all(), food_qs)
+
+
+documentation
+-------------
+
+http://django-generic-aggregation.readthedocs.org/

@@ -195,6 +195,8 @@ def gfk_expression(qs_model, gfk_field):
     
     pk_field_type = get_field_type(qs_model._meta.pk)
     gfk_field_type = get_field_type(gfk_field.model._meta.get_field(gfk_field.fk_field))
+    if 'mysql' in connection.settings_dict['ENGINE'] and pk_field_type == 'integer':
+        pk_field_type = 'unsigned'
     
     if pk_field_type != gfk_field_type:
         # cast the gfk to the pk type

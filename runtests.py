@@ -4,9 +4,13 @@ from os.path import dirname, abspath
 
 from django.conf import settings
 
-if len(sys.argv) > 1 and 'postgres' in sys.argv:
-    sys.argv.remove('postgres')
-    db_engine = 'django.db.backends.postgresql_psycopg2'
+if len(sys.argv) > 1: 
+    if 'postgres' in sys.argv:
+        sys.argv.remove('postgres')
+        db_engine = 'django.db.backends.postgresql_psycopg2'
+    elif 'mysql' in sys.argv:
+        sys.argv.remove('mysql')
+        db_engine = 'django.db.backends.mysql'
     db_name = 'test_main'
 else:
     db_engine = 'django.db.backends.sqlite3'

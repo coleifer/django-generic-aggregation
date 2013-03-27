@@ -21,12 +21,12 @@ def normalize_qs_model(qs_or_model):
         return qs_or_model
     return qs_or_model._default_manager.all()
 
-def get_field_type(f):
+def get_field_type(f, normalize=True):
     if django.VERSION < (1, 4):
         raw_type = f.db_type()
     else:
         raw_type = f.db_type(connection)
-    if raw_type.lower().split()[0] in ('serial', 'integer', 'unsigned', 'bigint', 'smallint'):
+    if normalize and raw_type.lower().split()[0] in ('serial', 'integer', 'unsigned', 'bigint', 'smallint'):
         raw_type = 'integer'
     return raw_type
 
@@ -194,11 +194,12 @@ def gfk_expression(qs_model, gfk_field):
     qn = connection.ops.quote_name
     
     pk_field_type = get_field_type(qs_model._meta.pk)
+    pk_field_type_raw = get_field_type(qs_model._meta.pk, False)
     gfk_field_type = get_field_type(gfk_field.model._meta.get_field(gfk_field.fk_field))
     
     if pk_field_type != gfk_field_type:
         # cast the gfk to the pk type
-        gfk_expr = "CAST(%s AS %s)" % (qn(gfk_field.fk_field), pk_field_type)
+        gfk_expr = "CAST(%s AS %s)" % (qn(gfk_field.fk_field), pk_field_type_raw)
     else:
         gfk_expr = qn(gfk_field.fk_field) # the object_id field on the GFK
     

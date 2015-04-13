@@ -1,0 +1,6 @@
+[run]
+source = generic_aggregation
+branck = True
+
+[report]
+omit = *tests*

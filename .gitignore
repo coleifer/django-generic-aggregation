@@ -6,3 +6,6 @@ pip-log.txt
 *~
 dist/
 *.egg-info/
+htmlcov
+.coverage
+.tox

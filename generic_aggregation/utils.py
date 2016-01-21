@@ -2,6 +2,7 @@
 Django does not properly set up casts
 """
 
+import django
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
@@ -37,8 +38,12 @@ def prepare_query(qs_model, generic_qs_model, aggregator, gfk_field):
         gfk_field = get_gfk_field(generic_model)
     
     content_type = ContentType.objects.get_for_model(model)
-    rel_name = aggregator.lookup.split('__', 1)[0]
-    
+
+    if django.VERSION < (1, 8):
+        rel_name = aggregator.lookup.split('__', 1)[0]
+    else:
+        rel_name = aggregator.default_alias.split('__', 1)[0]
+
     try:
         generic_rel_descriptor = getattr(model, rel_name)
     except AttributeError:
@@ -203,8 +208,12 @@ def fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=
     content_type = ContentType.objects.get_for_model(qs.model)
     
     qn = connection.ops.quote_name
-    aggregate_field = aggregator.lookup
-    
+
+    if django.VERSION < (1, 8):
+        aggregate_field = aggregator.lookup
+    else:
+        aggregate_field = aggregator.default_alias.rsplit('__', 1)[0]
+
     # since the aggregate may contain a generic relation, strip it
     if '__' in aggregate_field:
         _, aggregate_field = aggregate_field.rsplit('__', 1)
@@ -259,7 +268,11 @@ def fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field
     content_type = ContentType.objects.get_for_model(qs.model)
     
     qn = connection.ops.quote_name
-    aggregate_field = aggregator.lookup
+
+    if django.VERSION < (1, 8):
+        aggregate_field = aggregator.lookup
+    else:
+        aggregate_field = aggregator.default_alias.rsplit('__', 1)[0]
     
     # since the aggregate may contain a generic relation, strip it
     if '__' in aggregate_field:

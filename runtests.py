@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-import django
 from os.path import dirname, abspath
 
 from django.conf import settings
@@ -37,10 +36,7 @@ if not settings.configured:
         ),
     )
 
-if django.VERSION < (1, 6):
-    app_to_test = 'generic_aggregation_tests'
-else:
-    app_to_test = 'generic_aggregation.generic_aggregation_tests'
+app_to_test = 'generic_aggregation.generic_aggregation_tests'
 
 from django.test.utils import get_runner
 

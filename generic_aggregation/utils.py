@@ -2,10 +2,9 @@
 Django does not properly set up casts
 """
 
-import django
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection, models
+from django.db import connection
 from django.db.models.query import QuerySet
 
 
@@ -22,10 +21,7 @@ def normalize_qs_model(qs_or_model):
     return qs_or_model._default_manager.all()
 
 def get_field_type(f):
-    if django.VERSION < (1, 4):
-        raw_type = f.db_type()
-    else:
-        raw_type = f.db_type(connection)
+    raw_type = f.db_type(connection)
     if raw_type.lower().split()[0] in ('serial', 'integer', 'unsigned', 'bigint', 'smallint'):
         raw_type = 'integer'
     return raw_type
@@ -178,16 +174,10 @@ def generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):
 # fallback methods
 
 def query_as_sql(query):
-    if django.VERSION < (1, 2):
-        return query.as_sql()
-    else:
-        return query.get_compiler(connection=connection).as_sql()
+    return query.get_compiler(connection=connection).as_sql()
 
 def query_as_nested_sql(query):
-    if django.VERSION < (1, 2):
-        return query.as_nested_sql()
-    else:
-        return query.get_compiler(connection=connection).as_nested_sql()
+    return query.get_compiler(connection=connection).as_nested_sql()
 
 def gfk_expression(qs_model, gfk_field):
     # handle casting the GFK field if need be

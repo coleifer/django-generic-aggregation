@@ -6,6 +6,7 @@ import django
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
+from django.db.models import Q
 from django.db.models.query import QuerySet
 
 
@@ -61,10 +62,15 @@ def prepare_query(qs_model, generic_qs_model, aggregator, gfk_field):
     if pk_field_type != gfk_field_type:
         return False
     
-    qs = qs.filter(**{
-        '%s__%s' % (rel_name, gfk_field.ct_field): content_type,
-        '%s__pk__in' % (rel_name): generic_qs.values('pk'),
-    })
+    qs = qs.filter(
+        Q(**{
+            '%s__%s' % (rel_name, gfk_field.ct_field): content_type,
+            '%s__pk__in' % (rel_name): generic_qs.values('pk'),
+        })
+        | Q(**{
+            '%s__%s__isnull' % (rel_name, gfk_field.ct_field): True,
+            })
+    )
     return qs
 
 def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, alias='score'):
@@ -234,7 +240,7 @@ def fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=
     )
     
     sql_template = """
-        SELECT COALESCE(%s(%s), 0) AS aggregate_score
+        SELECT %s(%s) AS aggregate_score
         FROM %s
         WHERE
             %s=%s AND

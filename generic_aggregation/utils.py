@@ -3,7 +3,7 @@ Django does not properly set up casts
 """
 
 import django
-from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import Q

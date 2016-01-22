@@ -1,1 +1,3 @@
 django-generic-aggregation created by Charles Leifer in 2010
+significant contributions from:
+@jdavisp3 -- numerous bug fixes and updating app to work with newer django versions

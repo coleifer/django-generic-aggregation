@@ -5,7 +5,7 @@ f = open(os.path.join(os.path.dirname(__file__), 'README.rst'))
 readme = f.read()
 f.close()
 
-VERSION = (0, 3, 2)
+VERSION = (0, 4, 0)
 
 setup(
     name='django-generic-aggregation',

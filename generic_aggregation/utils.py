@@ -6,7 +6,6 @@ import django
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
-from django.db.models import Q
 from django.db.models.query import QuerySet
 
 
@@ -27,51 +26,6 @@ def get_field_type(f):
     if raw_type.lower().split()[0] in ('serial', 'integer', 'unsigned', 'bigint', 'smallint'):
         raw_type = 'integer'
     return raw_type
-
-def prepare_query(qs_model, generic_qs_model, aggregator, gfk_field):
-    qs = normalize_qs_model(qs_model)
-    generic_qs = normalize_qs_model(generic_qs_model)
-    
-    model = qs.model
-    generic_model = generic_qs.model
-    
-    if gfk_field is None:
-        gfk_field = get_gfk_field(generic_model)
-    
-    content_type = ContentType.objects.get_for_model(model)
-
-    if django.VERSION < (1, 8):
-        rel_name = aggregator.lookup.split('__', 1)[0]
-    else:
-        rel_name = aggregator.default_alias.split('__', 1)[0]
-
-    try:
-        generic_rel_descriptor = getattr(model, rel_name)
-    except AttributeError:
-        # missing the generic relation, so do fallback query
-        return False
-    
-    rel_model = generic_rel_descriptor.field.rel.to
-    if rel_model != generic_model:
-        raise AttributeError('Model %s does not match the GenericRelation "%s" (%s)' % (
-            generic_model, rel_name, rel_model,
-        ))
-    
-    pk_field_type = get_field_type(model._meta.pk)
-    gfk_field_type = get_field_type(generic_model._meta.get_field(gfk_field.fk_field))
-    if pk_field_type != gfk_field_type:
-        return False
-    
-    qs = qs.filter(
-        Q(**{
-            '%s__%s' % (rel_name, gfk_field.ct_field): content_type,
-            '%s__pk__in' % (rel_name): generic_qs.values('pk'),
-        })
-        | Q(**{
-            '%s__%s__isnull' % (rel_name, gfk_field.ct_field): True,
-            })
-    )
-    return qs
 
 def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, alias='score'):
     """

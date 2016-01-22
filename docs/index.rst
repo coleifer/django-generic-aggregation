@@ -43,7 +43,7 @@ The examples below assume the following simple models:
     
     class Food(models.Model):
         name = models.CharField(max_length=50)
-        ratings =GenericRelation(Rating) # reverse generic relation
+        ratings = GenericRelation(Rating) # reverse generic relation
 
 
 You want to figure out which items are highest rated (:py:func:`~generic_aggregation.generic_annotate`)

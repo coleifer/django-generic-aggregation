@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-import django
 from os.path import dirname, abspath
 
 from django.conf import settings
@@ -9,38 +8,39 @@ if len(sys.argv) > 1:
     if 'postgres' in sys.argv:
         sys.argv.remove('postgres')
         db_engine = 'django.db.backends.postgresql_psycopg2'
+        nulls_asc_sort_first = False
     elif 'mysql' in sys.argv:
         sys.argv.remove('mysql')
         db_engine = 'django.db.backends.mysql'
+        nulls_asc_sort_first = False
     db_name = 'test_main'
 else:
     db_engine = 'django.db.backends.sqlite3'
     db_name = ''
+    nulls_asc_sort_first = True
 
 if not settings.configured:
     settings.configure(
-        DATABASES = {
+        DATABASES={
             'default': {
                 'ENGINE': db_engine,
                 'NAME': db_name,
             }
         },
-        INSTALLED_APPS = [
+        INSTALLED_APPS=[
             'django.contrib.contenttypes',
-            'generic_aggregation.generic_aggregation_tests',
+            'generic_aggregation_tests',
         ],
-        MIDDLEWARE_CLASSES = (
+        MIDDLEWARE_CLASSES=(
             'django.contrib.sessions.middleware.SessionMiddleware',
             'django.contrib.auth.middleware.AuthenticationMiddleware',
             'django.middleware.locale.LocaleMiddleware',
             'django.middleware.common.CommonMiddleware',
         ),
+        NULLS_ASC_SORT_FIRST=nulls_asc_sort_first,
     )
 
-if django.VERSION < (1, 6):
-    app_to_test = 'generic_aggregation_tests'
-else:
-    app_to_test = 'generic_aggregation.generic_aggregation_tests'
+app_to_test = 'generic_aggregation_tests'
 
 from django.test.utils import get_runner
 

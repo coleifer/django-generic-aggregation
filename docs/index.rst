@@ -43,7 +43,7 @@ The examples below assume the following simple models:
     
     class Food(models.Model):
         name = models.CharField(max_length=50)
-        ratings = generic.GenericRelation(Rating) # reverse generic relation
+        ratings = GenericRelation(Rating) # reverse generic relation
 
 
 You want to figure out which items are highest rated (:py:func:`~generic_aggregation.generic_annotate`)
@@ -77,7 +77,7 @@ important detail
 As you may have noted in the above examples (at least those using annotate and
 aggregate), the aggregate we pass in is prefixed with ``ratings__``.  The double-underscore
 prefix refers to the ``ratings`` attribute of the Food model, which is a
-``django.contrib.contenttypes.generic.GenericRelation`` instance.  We are querying
+``django.contrib.contenttypes.fields.GenericRelation`` instance.  We are querying
 *across* that relation to the field on the Ratings model that we are interested in.
 When possible, use a GenericRelation and construct your queries in this manner.
 

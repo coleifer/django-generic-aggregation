@@ -3,9 +3,9 @@ Django does not properly set up casts
 """
 
 import django
-from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db import connection, models
+from django.db import connection
 from django.db.models.query import QuerySet
 
 
@@ -22,49 +22,10 @@ def normalize_qs_model(qs_or_model):
     return qs_or_model._default_manager.all()
 
 def get_field_type(f):
-    if django.VERSION < (1, 4):
-        raw_type = f.db_type()
-    else:
-        raw_type = f.db_type(connection)
+    raw_type = f.db_type(connection)
     if raw_type.lower().split()[0] in ('serial', 'integer', 'unsigned', 'bigint', 'smallint'):
         raw_type = 'integer'
     return raw_type
-
-def prepare_query(qs_model, generic_qs_model, aggregator, gfk_field):
-    qs = normalize_qs_model(qs_model)
-    generic_qs = normalize_qs_model(generic_qs_model)
-    
-    model = qs.model
-    generic_model = generic_qs.model
-    
-    if gfk_field is None:
-        gfk_field = get_gfk_field(generic_model)
-    
-    content_type = ContentType.objects.get_for_model(model)
-    rel_name = aggregator.lookup.split('__', 1)[0]
-    
-    try:
-        generic_rel_descriptor = getattr(model, rel_name)
-    except AttributeError:
-        # missing the generic relation, so do fallback query
-        return False
-    
-    rel_model = generic_rel_descriptor.field.rel.to
-    if rel_model != generic_model:
-        raise AttributeError('Model %s does not match the GenericRelation "%s" (%s)' % (
-            generic_model, rel_name, rel_model,
-        ))
-    
-    pk_field_type = get_field_type(model._meta.pk)
-    gfk_field_type = get_field_type(generic_model._meta.get_field(gfk_field.fk_field))
-    if pk_field_type != gfk_field_type:
-        return False
-    
-    qs = qs.filter(**{
-        '%s__%s' % (rel_name, gfk_field.ct_field): content_type,
-        '%s__pk__in' % (rel_name): generic_qs.values('pk'),
-    })
-    return qs
 
 def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, alias='score'):
     """
@@ -98,12 +59,7 @@ def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, ali
     :param gfk_field: explicitly specify the field w/the gfk
     :param alias: attribute name to use for annotation
     """
-    prepared_query = prepare_query(qs_model, generic_qs_model, aggregator, gfk_field)
-    if prepared_query is not False:
-        return prepared_query.annotate(**{alias: aggregator})
-    else:
-        # need to fall back since CAST will be missing
-        return fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field, alias)
+    return fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field, alias)
 
 
 def generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field=None):
@@ -134,12 +90,7 @@ def generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field=None):
     :param aggregator: an aggregation, from django.db.models, e.g. Count('id') or Avg('rating')
     :param gfk_field: explicitly specify the field w/the gfk
     """
-    prepared_query = prepare_query(qs_model, generic_qs_model, aggregator, gfk_field)
-    if prepared_query is not False:
-        return prepared_query.aggregate(aggregate=aggregator)['aggregate']
-    else:
-        # need to fall back since CAST will be missing
-        return fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field)
+    return fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field)
 
 
 def generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):
@@ -178,16 +129,10 @@ def generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):
 # fallback methods
 
 def query_as_sql(query):
-    if django.VERSION < (1, 2):
-        return query.as_sql()
-    else:
-        return query.get_compiler(connection=connection).as_sql()
+    return query.get_compiler(connection=connection).as_sql()
 
 def query_as_nested_sql(query):
-    if django.VERSION < (1, 2):
-        return query.as_nested_sql()
-    else:
-        return query.get_compiler(connection=connection).as_nested_sql()
+    return query.get_compiler(connection=connection).as_nested_sql()
 
 def gfk_expression(qs_model, gfk_field):
     # handle casting the GFK field if need be
@@ -213,8 +158,12 @@ def fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=
     content_type = ContentType.objects.get_for_model(qs.model)
     
     qn = connection.ops.quote_name
-    aggregate_field = aggregator.lookup
-    
+
+    if django.VERSION < (1, 8):
+        aggregate_field = aggregator.lookup
+    else:
+        aggregate_field = aggregator.default_alias.rsplit('__', 1)[0]
+
     # since the aggregate may contain a generic relation, strip it
     if '__' in aggregate_field:
         _, aggregate_field = aggregate_field.rsplit('__', 1)
@@ -235,7 +184,7 @@ def fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=
     )
     
     sql_template = """
-        SELECT COALESCE(%s(%s), 0) AS aggregate_score
+        SELECT %s(%s) AS aggregate_score
         FROM %s
         WHERE
             %s=%s AND
@@ -269,7 +218,11 @@ def fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field
     content_type = ContentType.objects.get_for_model(qs.model)
     
     qn = connection.ops.quote_name
-    aggregate_field = aggregator.lookup
+
+    if django.VERSION < (1, 8):
+        aggregate_field = aggregator.lookup
+    else:
+        aggregate_field = aggregator.default_alias.rsplit('__', 1)[0]
     
     # since the aggregate may contain a generic relation, strip it
     if '__' in aggregate_field:

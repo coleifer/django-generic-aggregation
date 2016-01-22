@@ -11,21 +11,24 @@ from generic_aggregation_tests.models import (
 )
 
 class SimpleTest(TestCase):
+    PAST_DATE = datetime.datetime(2010, 1, 1)
+
     def setUp(self):
         self.apple = Food.objects.create(name='apple')
         self.orange = Food.objects.create(name='orange')
         self.peach = Food.objects.create(name='peach')
 
-        dt = datetime.datetime(2010, 1, 1)
-
         Rating.objects.create(content_object=self.apple, rating=5)
         Rating.objects.create(content_object=self.apple, rating=3)
-        Rating.objects.create(content_object=self.apple, rating=1, created=dt)
-        Rating.objects.create(content_object=self.apple, rating=3, created=dt)
+        Rating.objects.create(content_object=self.apple, rating=1,
+                              created=self.PAST_DATE)
+        Rating.objects.create(content_object=self.apple, rating=3,
+                              created=self.PAST_DATE)
 
         Rating.objects.create(content_object=self.orange, rating=4)
         Rating.objects.create(content_object=self.orange, rating=3)
-        Rating.objects.create(content_object=self.orange, rating=8, created=dt)
+        Rating.objects.create(content_object=self.orange, rating=8,
+                              created=self.PAST_DATE)
 
     def generic_annotate(self, *args, **kwargs):
         return _generic_annotate(*args, **kwargs)
@@ -131,6 +134,16 @@ class SimpleTest(TestCase):
 
         self.assertEqual(food_c.score, None)
         self.assertEqual(food_c.name, 'peach')
+
+        persimmon = Food.objects.create(name='persimmon')
+
+        Rating.objects.create(content_object=persimmon, rating=1,
+                              created=self.PAST_DATE)
+
+        self.assertEqual(annotated_qs.count(), 4)
+        self.assertEqual(
+            {'apple': 8, 'orange': 7, 'peach': None, 'persimmon': None},
+            {food.name: food.score for food in annotated_qs})
 
     def test_subset_aggregation(self):
         todays_ratings = Rating.objects.filter(created__gte=datetime.date.today())

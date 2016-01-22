@@ -105,12 +105,7 @@ def generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field=None, ali
     :param gfk_field: explicitly specify the field w/the gfk
     :param alias: attribute name to use for annotation
     """
-    prepared_query = prepare_query(qs_model, generic_qs_model, aggregator, gfk_field)
-    if prepared_query is not False:
-        return prepared_query.annotate(**{alias: aggregator})
-    else:
-        # need to fall back since CAST will be missing
-        return fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field, alias)
+    return fallback_generic_annotate(qs_model, generic_qs_model, aggregator, gfk_field, alias)
 
 
 def generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field=None):
@@ -141,12 +136,7 @@ def generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field=None):
     :param aggregator: an aggregation, from django.db.models, e.g. Count('id') or Avg('rating')
     :param gfk_field: explicitly specify the field w/the gfk
     """
-    prepared_query = prepare_query(qs_model, generic_qs_model, aggregator, gfk_field)
-    if prepared_query is not False:
-        return prepared_query.aggregate(aggregate=aggregator)['aggregate']
-    else:
-        # need to fall back since CAST will be missing
-        return fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field)
+    return fallback_generic_aggregate(qs_model, generic_qs_model, aggregator, gfk_field)
 
 
 def generic_filter(generic_qs_model, filter_qs_model, gfk_field=None):

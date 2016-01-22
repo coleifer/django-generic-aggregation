@@ -1,3 +1,5 @@
+# Use this settings file to update migrations if the test app models change.
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',

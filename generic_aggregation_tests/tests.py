@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from generic_aggregation import generic_annotate as _generic_annotate, generic_aggregate as _generic_aggregate, generic_filter as _generic_filter
 from generic_aggregation.utils import fallback_generic_annotate, fallback_generic_aggregate, fallback_generic_filter
-from generic_aggregation.generic_aggregation_tests.models import (
+from generic_aggregation_tests.models import (
     Food, Rating, CharFieldGFK
 )
 

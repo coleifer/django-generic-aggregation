@@ -29,7 +29,7 @@ if not settings.configured:
         },
         INSTALLED_APPS=[
             'django.contrib.contenttypes',
-            'generic_aggregation.generic_aggregation_tests',
+            'generic_aggregation_tests',
         ],
         MIDDLEWARE_CLASSES=(
             'django.contrib.sessions.middleware.SessionMiddleware',
@@ -40,7 +40,7 @@ if not settings.configured:
         NULLS_ASC_SORT_FIRST=nulls_asc_sort_first,
     )
 
-app_to_test = 'generic_aggregation.generic_aggregation_tests'
+app_to_test = 'generic_aggregation_tests'
 
 from django.test.utils import get_runner
 

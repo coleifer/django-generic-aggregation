@@ -7,7 +7,7 @@ DATABASES = {
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
-    'generic_aggregation.generic_aggregation_tests',
+    'generic_aggregation_tests',
 ]
 
 MIDDLEWARE_CLASSES = (

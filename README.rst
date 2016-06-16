@@ -68,4 +68,4 @@ You want to only display ratings for foods that start with 'a' (generic_filter)
 documentation
 -------------
 
-http://django-generic-aggregation.readthedocs.org/
+https://django-generic-aggregation.readthedocs.io/

@@ -61,6 +61,8 @@ You want the average rating for all foods that start with 'a' (generic_aggregate
 
 You want to only display ratings for foods that start with 'a' (generic_filter)
 
+::
+
     food_qs = Food.objects.filter(name__startswith='a')
     generic_filter(Rating.objects.all(), food_qs)
 
